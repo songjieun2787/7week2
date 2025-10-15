@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>글자로 그리기</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+@font-face {
+  font-family: Independent;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.1/Dokrip.woff') format('woff');
+  font-display: swap;
+}
+@font-face {
+  font-family: ChungjuKimsaeng;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2312-1@1.1/ChungjuKimSaengTTF.woff2') format('woff2');
+  font-display: swap;
+}
+
+body {
+  background-image: url('page.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  margin: 0;
+  overflow: hidden;
+  font-family: ChungjuKimsaeng;
+  background-color: #ffffff;
+}
+
+input, select, button {
+  margin: 4px;
+  font-size: 1rem;
+  font-family: ChungjuKimsaeng;
+  padding: 5px 8px;
+}
+button { cursor: pointer; }
+
+.ui-panel {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(255,255,255,0.78);
+  padding: 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.group label { font-weight: bold; font-size: 0.9rem; }
+
+.fixedText {
+  position: absolute;
+  user-select: none;
+  pointer-events: none;
+  font-family: Independent, ChungjuKimsaeng;
+}
+#monitor {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  font-family: Independent, ChungjuKimsaeng;
+  transform: translate(-50%, -50%);
+}
+
+#introScreen {
+  position: fixed;
+  inset: 0;
+  background-image: url('배경 이미지.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 20px;
+  padding-right: 200px; 
+  z-index: 100;
+}
+#introScreen h1 { font-size: 2.5rem; color: #333; margin:0; }
+#introScreen div { display: flex; gap: 10px; justify-content: flex-end; }
+#introScreen button {
+  padding: 10px 20px;
+  font-size: 1.2rem;
+  border-radius: 1px;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+#introScreen button:hover { background: #ffe8e0; }
+
+#howToModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+#howToModal .modal-content {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 1px;
+  max-width: 480px;
+  line-height: 1.6;
+  position: relative;
+}
+#howToModal button {
+  margin-top: 12px;
+  padding: 6px 16px;
+  background: #BFBFBF;
+  border-radius: 1px;
+    position: absolute;
+  bottom: 16px;
+  right: 20px;
+}
+
+#stats {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.8);
+  padding: 6px 10px;
+  border-radius: 8px;
+  z-index: 20;
+  text-align: right;
+}
+</style>
+</head>
+<body>
+
+<div id="introScreen">
+  <h1>글자로 그리기</h1>
+  <div>
+    <button id="startBtn">시작</button>
+    <button id="howToBtn">설명</button>
+  </div>
+</div>
+
+<div id="howToModal">
+  <div class="modal-content">
+    <h2>사용 방법</h2>
+    <ul>
+      <li>단어를 입력하고 클릭하면 글씨가 찍혀요</li>
+      <li>붓모드를 켜면 드래그하며 여러 개를 찍을 수 있어요</li>
+      <li>배경 이미지 ON/OFF 및 배경 색상 변경 가능</li>
+      <li>아직 디자인 적용 X 일단 기능만...</li>
+      <li>뭘 더 추가해야 할까..?</li>
+      <li>배경 바꾸기, 음악 플레이어?, 뭘 그릴지 추천기능</li>
+       <li>일단 폰트 바꾸고 추가하기</li>
+    </ul>
+    <button id="closeHowTo">닫기</button>
+  </div>
+</div>
+
+<div class="ui-panel" id="appUI" style="display:none;">
+  <div class="group"><input id="myType" type="text" placeholder="단어 입력"></div>
+  <div class="group">
+    <label>폰트</label>
+    <select id="fontSelect">
+      <option value="Independent">독립체</option>
+      <option value="ChungjuKimsaeng">충주김생체</option>
+      <option value="Arial">Arial</option>
+    </select>
+    <input id="myColor" type="color" value="#ffffff">
+  </div>
+  <div class="group">
+    <label>크기</label>
+    <input id="fontSize" type="range" min="20" max="200" value="64">
+  </div>
+  <div class="group">
+    <label>투명도</label>
+    <input id="opacity" type="range" min="0.1" max="1" step="0.1" value="1">
+  </div>
+  <div class="group"><button id="brushToggle">🖌️ 붓모드 OFF</button></div>
+  <div class="group"><button id="randomColorToggle">🎨 랜덤색 OFF</button></div>
+  <div class="group"><button id="shadowToggle">🌙 그림자 OFF</button></div>
+  <div class="group"><button id="soundToggle">🔊 효과음 OFF</button></div>
+  <div class="group"><button id="undo">↩️ Undo</button><button id="redo">↪️ Redo</button></div>
+  <div class="group" style="justify-content:flex-start;">
+    <button id="reset" style="background:#ffdddd;">❌ Reset All</button>
+  </div>
+  <div class="group" style="justify-content:flex-start;">
+    <button id="saveImage" style="background:#d9f7d9;">💾 저장하기</button>
+  </div>
+  <div class="group">
+    <label>랜덤 글자</label>
+    <input id="randCount" type="number" min="1" max="20" value="5" style="width:50px;">
+    <button id="randTextBtn">클릭</button>
+  </div>
+  <div class="group">
+    <label>배경 이미지</label>
+    <input type="checkbox" id="bgToggle"> ON
+  </div>
+  <div class="group">
+    <label>배경 색상</label>
+    <input type="color" id="bgColor" value="#ffffff">
+  </div>
+</div>
+
+<div id="monitor" style="font-size:64px;color:#ffffff;"></div>
+<div id="stats">총 글자: 0<br>사용 시간: 00:00:00</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const intro=document.getElementById("introScreen");
+  const appUI=document.getElementById("appUI");
+  const startBtn=document.getElementById("startBtn");
+  const howToBtn=document.getElementById("howToBtn");
+  const howToModal=document.getElementById("howToModal");
+  const closeHowTo=document.getElementById("closeHowTo");
+
+  const monitor=document.getElementById("monitor");
+  const myType=document.getElementById("myType");
+  const myColor=document.getElementById("myColor");
+  const fontSelect=document.getElementById("fontSelect");
+  const fontSize=document.getElementById("fontSize");
+  const opacityInput=document.getElementById("opacity");
+  const shadowToggle=document.getElementById("shadowToggle");
+  const randomColorToggle=document.getElementById("randomColorToggle");
+  const brushToggle=document.getElementById("brushToggle");
+  const undoBtn=document.getElementById("undo");
+  const redoBtn=document.getElementById("redo");
+  const resetBtn=document.getElementById("reset");
+  const soundToggle=document.getElementById("soundToggle");
+  const saveBtn=document.getElementById("saveImage");
+  const stats=document.getElementById("stats");
+  const randCountInput=document.getElementById("randCount");
+  const randTextBtn=document.getElementById("randTextBtn");
+  const bgToggle=document.getElementById("bgToggle");
+  const bgColor=document.getElementById("bgColor");
+
+  let isDragging=false,lastX=0,lastY=0;
+  let shadowOn=false,randomColorOn=false,brushOn=false,soundOn=false;
+  let undoStack=[],redoStack=[];
+  let totalLetters=0,startTime=0;
+  const soundURL="click.wav";
+
+  function createWord(text,x,y,color,font,size,opacity,playSound=true,save=true){
+    if(!text) return;
+    const fixed=document.createElement("div");
+    fixed.textContent=text;
+    Object.assign(fixed.style,{
+      position:"absolute",
+      left:x+"px",
+      top:y+"px",
+      color:color,
+      fontFamily:font,
+      fontSize:size+"px",
+      opacity:opacity,
+      transform:"translate(-50%,-50%)",
+      userSelect:"none",
+      pointerEvents:"none"
+    });
+    if(shadowOn) fixed.style.textShadow="2px 2px 5px rgba(0,0,0,0.4)";
+    fixed.className="fixedText";
+    document.body.appendChild(fixed);
+    if(soundOn && playSound) new Audio(soundURL).play();
+    if(save){undoStack.push(fixed);redoStack=[];totalLetters++;updateStats();}
+  }
+
+  function randColor(){return "#"+Math.floor(Math.random()*16777215).toString(16);}
+  function generateRandomText(length){
+    const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let result="";
+    for(let i=0;i<length;i++){ result+=chars.charAt(Math.floor(Math.random()*chars.length)); }
+    return result;
+  }
+  function updateStats(){
+    const elapsed=Math.floor((Date.now()-startTime)/1000);
+    const h=Math.floor(elapsed/3600).toString().padStart(2,"0");
+    const m=Math.floor((elapsed%3600)/60).toString().padStart(2,"0");
+    const s=(elapsed%60).toString().padStart(2,"0");
+    stats.innerHTML=`총 글자: ${totalLetters}<br>사용 시간: ${h}:${m}:${s}`;
+  }
+
+  startBtn.onclick=()=>{
+    intro.style.display="none";
+    appUI.style.display="flex";
+    startTime=Date.now();
+    setInterval(updateStats,1000);
+    document.body.style.backgroundImage="none";
+    bgToggle.checked=false;
+  };
+
+  howToBtn.onclick=()=>howToModal.style.display="flex";
+  closeHowTo.onclick=()=>howToModal.style.display="none";
+
+  myType.oninput=()=>monitor.textContent=myType.value;
+  myColor.oninput=()=>monitor.style.color=myColor.value;
+  fontSelect.onchange=()=>monitor.style.fontFamily=fontSelect.value;
+  fontSize.oninput=()=>monitor.style.fontSize=fontSize.value+"px";
+  opacityInput.oninput=()=>monitor.style.opacity=opacityInput.value;
+
+  document.addEventListener("mousemove",e=>{
+    monitor.style.left=e.pageX+"px";
+    monitor.style.top=e.pageY+"px";
+    monitor.style.transform="translate(-50%,-50%)";
+
+    if(isDragging && brushOn){
+      const dx=e.pageX-lastX,dy=e.pageY-lastY;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const minDist = Number(fontSize.value)*0.8;
+      if(dist>minDist){
+        const color=randomColorOn?randColor():myColor.value;
+        createWord(myType.value,e.pageX,e.pageY,color,fontSelect.value,Number(fontSize.value),opacityInput.value,false);
+        lastX=e.pageX; lastY=e.pageY;
+      }
+    }
+  });
+
+  document.addEventListener("mousedown",e=>{
+    if(e.target.closest(".ui-panel")) return;
+    if(!myType.value) return;
+    isDragging=true;
+    lastX=e.pageX; lastY=e.pageY;
+    const color=randomColorOn?randColor():myColor.value;
+    createWord(myType.value,e.pageX,e.pageY,color,fontSelect.value,Number(fontSize.value),opacityInput.value,true);
+  });
+  document.addEventListener("mouseup",()=>isDragging=false);
+
+  shadowToggle.onclick=()=>{shadowOn=!shadowOn; shadowToggle.textContent=shadowOn?"🌙 그림자 ON":"🌙 그림자 OFF";};
+  randomColorToggle.onclick=()=>{randomColorOn=!randomColorOn; randomColorToggle.textContent=randomColorOn?"🎨 랜덤색 ON":"🎨 랜덤색 OFF";};
+  brushToggle.onclick=()=>{brushOn=!brushOn; brushToggle.textContent=brushOn?"🖌️ 붓모드 ON":"🖌️ 붓모드 OFF";};
+  soundToggle.onclick=()=>{soundOn=!soundOn; soundToggle.textContent=soundOn?"🔊 효과음 ON":"🔊 효과음 OFF";};
+
+  undoBtn.onclick=()=>{let last=undoStack.pop(); if(last){redoStack.push(last); last.remove(); totalLetters--; updateStats();}};
+  redoBtn.onclick=()=>{let el=redoStack.pop(); if(el){document.body.appendChild(el); undoStack.push(el); totalLetters++; updateStats();}};
+  resetBtn.onclick=()=>{document.querySelectorAll(".fixedText").forEach(el=>el.remove()); undoStack=[]; redoStack=[]; totalLetters=0; updateStats();};
+
+  // 저장 버튼 (배경 이미지 ON/OFF 자동 처리)
+  saveBtn.onclick = () => { 
+    const container = document.createElement("div");
+    container.style.position = "relative";
+    container.style.width = window.innerWidth + "px";
+    container.style.height = window.innerHeight + "px";
+
+    if (bgToggle.checked) {
+      container.style.backgroundImage = "url('page.jpg')";
+      container.style.backgroundSize = "cover";
+      container.style.backgroundPosition = "center";
+    } else {
+      container.style.background = window.getComputedStyle(document.body).backgroundColor;
+    }
+
+    document.querySelectorAll(".fixedText").forEach(el => {
+      const clone = el.cloneNode(true);
+      container.appendChild(clone);
+    });
+
+    document.body.appendChild(container);
+
+    html2canvas(container, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = 'my_drawing.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      container.remove();
+    });
+  };
+
+  randTextBtn.onclick=()=>{const len=parseInt(randCountInput.value)||5;const text=generateRandomText(len);myType.value=text;monitor.textContent=text;};
+  bgToggle.onchange=()=>{if(bgToggle.checked){document.body.style.backgroundImage="url('page.jpg')";}else{document.body.style.backgroundImage="none";}};
+  bgColor.oninput=()=>{document.body.style.backgroundColor=bgColor.value;};
+});
+</script>
+</body>
+</html>
